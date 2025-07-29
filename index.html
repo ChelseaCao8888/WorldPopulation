@@ -217,7 +217,7 @@ svg.append("text")
 
 // --- Load and Process Data ---
 // IMPORTANT: This script assumes 'dadta_pivot.csv' is in the same directory as the HTML file.
-d3.csv("data_pivot.csv").then(function(data) {
+d3.csv("data.csv").then(function(data) {
     // Data processing
     const processedData = {};
     data.forEach(d => {
@@ -342,7 +342,7 @@ d3.csv("data_pivot.csv").then(function(data) {
 
 }).catch(function(error) {
     console.error("Error loading the data file:", error);
-    d3.select("#vis-container").html("<h2>Error loading data_pivot.csv</h2><p>Please make sure the dadta_pivot.csv file is in the same directory as this HTML file.</p>");
+    d3.select("#vis-container").html("<h2>Error loading data.csv</h2><p>Please make sure the data.csv file is in the same directory as this HTML file.</p>");
 });
 
 </script>
