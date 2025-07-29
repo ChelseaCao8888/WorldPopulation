@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Dance of Life: Birth Rate vs. Life Expectancy</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://rawgit.com/susielu/d3-annotation/master/d3-annotation.min.js"></script>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        #main-container {
+            display: flex;
+            max-width: 1200px;
+            width: 100%;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        #narrative {
+            width: 350px;
+            padding: 30px;
+            box-sizing: border-box;
+            background-color: #f9f9f9;
+            border-right: 1px solid #ddd;
+        }
+        #narrative h1 {
+            font-size: 24px;
+            margin-top: 0;
+        }
+        #narrative p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333;
+        }
+        #vis-container {
+            flex: 1;
+            padding: 20px;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        .x-axis path, .y-axis path, .x-axis .tick line, .y-axis .tick line {
+            stroke: #ccc;
+        }
+        .x-axis .tick text, .y-axis .tick text {
+            fill: #555;
+            font-size: 12px;
+        }
+        .axis-label {
+            font-size: 14px;
+            fill: #333;
+            font-weight: bold;
+        }
+        .annotation-note-title {
+            font-weight: bold;
+        }
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            width: auto;
+            height: auto;
+            padding: 8px;
+            font: 12px sans-serif;
+            background: lightsteelblue;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="main-container">
+    <div id="narrative">
+        <h1 id="scene-title">Introduction</h1>
+        <p id="scene-text">
+            This visualization explores the relationship between a country's birth rate and its life expectancy.
+            Each circle represents a country. Let's start by looking at the world in 1960.
+        </p>
+        <div class="controls">
+            <button id="prev-btn" disabled>Previous</button>
+            <button id="next-btn">Next</button>
+        </div>
+    </div>
+    <div id="vis-container">
+        <svg id="chart" width="800" height="600"></svg>
+    </div>
+</div>
+<div class="tooltip"></div>
+
+
+<script>
+// --- 1. Parameters and State ---
+let currentScene = 0;
+const scenes = [
+    {
+        title: "Scene 1: The World in 1960",
+        text: "In 1960, most countries had high birth rates and lower life expectancy. Countries with higher life expectancy tended to have already lowered their birth rates. Let's look at Albania, a country that in 1960 still had a very high birth rate.",
+        year: 1960,
+        annotation: (data) => {
+            const albData = data.find(d => d.country === 'Albania');
+            if (!albData) return [];
+            return [{
+                note: { title: "Albania, 1960", label: `Birth Rate: ${albData.birthRate.toFixed(1)}\nLife Expectancy: ${albData.lifeExpectancy.toFixed(1)} years` },
+                x: xScale(albData.lifeExpectancy), y: yScale(albData.birthRate), dy: 50, dx: 50
+            }];
+        }
+    },
+    {
+        title: "Scene 2: The Demographic Transition",
+        text: "Over the next 50 years, a clear trend emerges. Most countries move towards the bottom right: birth rates fall and life expectancies increase. This is known as the demographic transition.",
+        year: 2010,
+        annotation: () => [{
+            note: { title: "The General Trend", label: "Countries move towards lower birth rates and higher life expectancy." },
+            x: 400, y: 300, dy: -50, dx: 50,
+            connector: {
+                end: "arrow",
+                points: [[-20, 20], [-80, 80]]
+            }
+        }]
+    },
+    {
+        title: "Scene 3: Albania's Journey",
+        text: "Let's trace Albania's path from 1960 to 2016. It follows the general trend, dramatically improving its life expectancy while reducing its birth rate, a story of remarkable development.",
+        year: 2016,
+        annotation: (data) => {
+            const albData = data.find(d => d.country === 'Albania');
+            if (!albData) return [];
+            return [{
+                note: { title: "Albania, 2016", label: `Birth Rate: ${albData.birthRate.toFixed(1)}\nLife Expectancy: ${albData.lifeExpectancy.toFixed(1)} years` },
+                x: xScale(albData.lifeExpectancy), y: yScale(albData.birthRate), dy: -30, dx: -50
+            }];
+        }
+    },
+    {
+        title: "Scene 4: Explore the Data",
+        text: "Now it's your turn. Hover over any circle to see the country's name and its data for the year 2016. You can see how different countries compare at the end of this period.",
+        year: 2016,
+        annotation: () => [] // No specific annotation for this scene
+    }
+];
+
+// --- 2. D3 Setup ---
+const margin = {top: 20, right: 20, bottom: 50, left: 60};
+const width = 800 - margin.left - margin.right;
+const height = 600 - margin.top - margin.bottom;
+
+const svg = d3.select("#chart")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+const tooltip = d3.select(".tooltip");
+
+// --- Scales ---
+const xScale = d3.scaleLinear().domain([20, 85]).range([0, width]);
+const yScale = d3.scaleLinear().domain([5, 60]).range([height, 0]);
+
+// --- Axes ---
+const xAxis = d3.axisBottom(xScale);
+const yAxis = d3.axisLeft(yScale);
+
+svg.append("g")
+    .attr("class", "x-axis")
+    .attr("transform", `translate(0, ${height})`)
+    .call(xAxis);
+
+svg.append("g")
+    .attr("class", "y-axis")
+    .call(yAxis);
+
+// Axis Labels
+svg.append("text")
+    .attr("class", "axis-label")
+    .attr("text-anchor", "end")
+    .attr("x", width / 2 + margin.left)
+    .attr("y", height + margin.top + 20)
+    .text("Life Expectancy (years)");
+
+svg.append("text")
+    .attr("class", "axis-label")
+    .attr("text-anchor", "end")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -margin.left + 20)
+    .attr("x", -height / 2)
+    .text("Birth Rate (per 1,000 people)");
+
+
+// --- Load and Process Data ---
+// IMPORTANT: This script assumes 'dadta_pivot.csv' is in the same directory as the HTML file.
+d3.csv("data_pivot.csv").then(function(data) {
+    // Data processing
+    const processedData = {};
+    data.forEach(d => {
+        if (!d.Year || !d['Country Name'] || !d.Value) return;
+
+        const year = +d.Year;
+        const country = d['Country Name'];
+        const value = +d.Value;
+        const category = d.Category;
+
+        if (!processedData[year]) processedData[year] = {};
+        if (!processedData[year][country]) processedData[year][country] = { country: country, year: year };
+
+        if (category.includes('Birth rate')) {
+            processedData[year][country].birthRate = value;
+        } else if (category.includes('Life expectancy')) {
+            processedData[year][country].lifeExpectancy = value;
+        }
+    });
+
+    const yearlyData = {};
+    Object.keys(processedData).forEach(year => {
+        yearlyData[year] = Object.values(processedData[year]).filter(d => d.birthRate && d.lifeExpectancy);
+    });
+    
+    // --- 3. Scene Drawing Function ---
+    function drawScene(sceneIndex) {
+        const scene = scenes[sceneIndex];
+        const year = scene.year;
+        const displayData = yearlyData[year];
+        
+        // Update narrative text
+        d3.select("#scene-title").text(scene.title);
+        d3.select("#scene-text").text(scene.text);
+
+        // Update button states
+        d3.select("#prev-btn").property("disabled", sceneIndex === 0);
+        d3.select("#next-btn").property("disabled", sceneIndex === scenes.length - 1);
+
+        // Data join
+        const circles = svg.selectAll("circle").data(displayData, d => d.country);
+
+        // Exit
+        circles.exit().remove();
+
+        // Enter + Update
+        circles.enter().append("circle")
+            .attr("r", 5)
+            .attr("fill", "steelblue")
+            .merge(circles)
+            .transition().duration(1000)
+            .attr("cx", d => xScale(d.lifeExpectancy))
+            .attr("cy", d => yScale(d.birthRate))
+            .attr("fill", d => {
+                if(sceneIndex === 0 && d.country === 'Albania') return 'red';
+                if(sceneIndex === 2 && d.country === 'Albania') return 'red';
+                return 'steelblue';
+            })
+            .style("opacity", 0.7);
+
+        // Annotations
+        svg.selectAll(".annotation-group").remove(); // Clear previous annotations
+        if (scene.annotation) {
+             const makeAnnotations = d3.annotation().annotations(scene.annotation(displayData));
+             svg.append("g").attr("class", "annotation-group").call(makeAnnotations);
+        }
+        
+        // Add path for Scene 3
+        if (sceneIndex === 2) {
+            const albaniaPathData = Object.keys(yearlyData)
+                .map(y => yearlyData[y].find(c => c.country === 'Albania'))
+                .filter(Boolean)
+                .sort((a,b) => a.year - b.year);
+            
+            const line = d3.line()
+                .x(d => xScale(d.lifeExpectancy))
+                .y(d => yScale(d.birthRate));
+
+            svg.append("path")
+                .datum(albaniaPathData)
+                .attr("class", "annotation-group") // To be removed with annotations
+                .attr("fill", "none")
+                .attr("stroke", "red")
+                .attr("stroke-width", 2)
+                .attr("d", line);
+        }
+
+        // Tooltips for Scene 4
+        if (sceneIndex === 3) {
+            svg.selectAll("circle")
+                .on("mouseover", function(d) {
+                    tooltip.transition().duration(200).style("opacity", .9);
+                    tooltip.html(`${d.country}<br/>Life Exp: ${d.lifeExpectancy.toFixed(1)}<br/>Birth Rate: ${d.birthRate.toFixed(1)}`)
+                        .style("left", (d3.event.pageX + 5) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px");
+                })
+                .on("mouseout", function(d) {
+                    tooltip.transition().duration(500).style("opacity", 0);
+                });
+        } else {
+            svg.selectAll("circle").on("mouseover", null).on("mouseout", null);
+        }
+    }
+    
+    // --- 4. Triggers ---
+    d3.select("#next-btn").on("click", () => {
+        if (currentScene < scenes.length - 1) {
+            currentScene++;
+            drawScene(currentScene);
+        }
+    });
+
+    d3.select("#prev-btn").on("click", () => {
+        if (currentScene > 0) {
+            currentScene--;
+            drawScene(currentScene);
+        }
+    });
+
+    // Initial Draw
+    drawScene(0);
+
+}).catch(function(error) {
+    console.error("Error loading the data file:", error);
+    d3.select("#vis-container").html("<h2>Error loading data_pivot.csv</h2><p>Please make sure the dadta_pivot.csv file is in the same directory as this HTML file.</p>");
+});
+
+</script>
+
+</body>
+</html>
