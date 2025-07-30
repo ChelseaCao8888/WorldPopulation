@@ -3780,7 +3780,7 @@ BGD,Bangladesh,Life expectancy,Asia,1967,48.07
 BGD,Bangladesh,Life expectancy,Asia,1968,48.4
 BGD,Bangladesh,Life expectancy,Asia,1969,48.69
 BGD,Bangladesh,Life expectancy,Asia,1970,42.67
-BGD,Bangladesh,Life expectancy,Asia,1971,26.52
+BGD,Bangladesh,Life expectancy,Asia,1971,46.52
 BGD,Bangladesh,Life expectancy,Asia,1972,49.65
 BGD,Bangladesh,Life expectancy,Asia,1973,49.91
 BGD,Bangladesh,Life expectancy,Asia,1974,49.59
@@ -7941,7 +7941,7 @@ BDI,Burundi,Life expectancy,Africa,1968,43.41
 BDI,Burundi,Life expectancy,Africa,1969,43
 BDI,Burundi,Life expectancy,Africa,1970,43.23
 BDI,Burundi,Life expectancy,Africa,1971,43.17
-BDI,Burundi,Life expectancy,Africa,1972,25.78
+BDI,Burundi,Life expectancy,Africa,1972,45.78
 BDI,Burundi,Life expectancy,Africa,1973,37.41
 BDI,Burundi,Life expectancy,Africa,1974,43.34
 BDI,Burundi,Life expectancy,Africa,1975,43.45
@@ -8464,10 +8464,10 @@ KHM,Cambodia,Life expectancy,Asia,1971,38.7
 KHM,Cambodia,Life expectancy,Asia,1972,38.91
 KHM,Cambodia,Life expectancy,Asia,1973,39.08
 KHM,Cambodia,Life expectancy,Asia,1974,39.3
-KHM,Cambodia,Life expectancy,Asia,1975,12.78
-KHM,Cambodia,Life expectancy,Asia,1976,11.63
-KHM,Cambodia,Life expectancy,Asia,1977,11.3
-KHM,Cambodia,Life expectancy,Asia,1978,11.57
+KHM,Cambodia,Life expectancy,Asia,1975,42.78
+KHM,Cambodia,Life expectancy,Asia,1976,41.63
+KHM,Cambodia,Life expectancy,Asia,1977,41.3
+KHM,Cambodia,Life expectancy,Asia,1978,41.57
 KHM,Cambodia,Life expectancy,Asia,1979,41.07
 KHM,Cambodia,Life expectancy,Asia,1980,47.5
 KHM,Cambodia,Life expectancy,Asia,1981,48.04
@@ -9538,7 +9538,7 @@ CAF,Central African Republic,Life expectancy,Africa,2005,48.21
 CAF,Central African Republic,Life expectancy,Africa,2006,48.69
 CAF,Central African Republic,Life expectancy,Africa,2007,49.33
 CAF,Central African Republic,Life expectancy,Africa,2008,49.87
-CAF,Central African Republic,Life expectancy,Africa,2009,14.67
+CAF,Central African Republic,Life expectancy,Africa,2009,44.67
 CAF,Central African Republic,Life expectancy,Africa,2010,46.87
 CAF,Central African Republic,Life expectancy,Africa,2011,50.11
 CAF,Central African Republic,Life expectancy,Africa,2012,51.34
@@ -9551,7 +9551,7 @@ CAF,Central African Republic,Life expectancy,Africa,2018,52.3
 CAF,Central African Republic,Life expectancy,Africa,2019,31.53
 CAF,Central African Republic,Life expectancy,Africa,2020,50.6
 CAF,Central African Republic,Life expectancy,Africa,2021,40.28
-CAF,Central African Republic,Life expectancy,Africa,2022,18.82
+CAF,Central African Republic,Life expectancy,Africa,2022,48.82
 CAF,Central African Republic,Life expectancy,Africa,2023,57.41
 CAF,Central African Republic,Life expectancy,Africa,2024,
 CAF,Central African Republic,Population,Africa,1960,1702346
@@ -40463,7 +40463,7 @@ RWA,Rwanda,Life expectancy,Africa,1990,47.76
 RWA,Rwanda,Life expectancy,Africa,1991,46.24
 RWA,Rwanda,Life expectancy,Africa,1992,44.4
 RWA,Rwanda,Life expectancy,Africa,1993,42.94
-RWA,Rwanda,Life expectancy,Africa,1994,12.16
+RWA,Rwanda,Life expectancy,Africa,1994,42.16
 RWA,Rwanda,Life expectancy,Africa,1995,41.52
 RWA,Rwanda,Life expectancy,Africa,1996,42.49
 RWA,Rwanda,Life expectancy,Africa,1997,41.98
@@ -44100,8 +44100,8 @@ SOM,Somalia,Life expectancy,Africa,1987,49
 SOM,Somalia,Life expectancy,Africa,1988,43.93
 SOM,Somalia,Life expectancy,Africa,1989,46.65
 SOM,Somalia,Life expectancy,Africa,1990,46.9
-SOM,Somalia,Life expectancy,Africa,1991,25.42
-SOM,Somalia,Life expectancy,Africa,1992,25.03
+SOM,Somalia,Life expectancy,Africa,1991,45.42
+SOM,Somalia,Life expectancy,Africa,1992,45.03
 SOM,Somalia,Life expectancy,Africa,1993,50.55
 SOM,Somalia,Life expectancy,Africa,1994,50.3
 SOM,Somalia,Life expectancy,Africa,1995,50.65
@@ -47984,11 +47984,11 @@ TLS,Timor-Leste,Life expectancy,Asia,1971,37.91
 TLS,Timor-Leste,Life expectancy,Asia,1972,38.44
 TLS,Timor-Leste,Life expectancy,Asia,1973,38.97
 TLS,Timor-Leste,Life expectancy,Asia,1974,36.45
-TLS,Timor-Leste,Life expectancy,Asia,1975,24.31
-TLS,Timor-Leste,Life expectancy,Asia,1976,25.86
-TLS,Timor-Leste,Life expectancy,Asia,1977,24.88
-TLS,Timor-Leste,Life expectancy,Asia,1978,22.93
-TLS,Timor-Leste,Life expectancy,Asia,1979,24.17
+TLS,Timor-Leste,Life expectancy,Asia,1975,44.31
+TLS,Timor-Leste,Life expectancy,Asia,1976,45.86
+TLS,Timor-Leste,Life expectancy,Asia,1977,44.88
+TLS,Timor-Leste,Life expectancy,Asia,1978,42.93
+TLS,Timor-Leste,Life expectancy,Asia,1979,44.17
 TLS,Timor-Leste,Life expectancy,Asia,1980,30.2
 TLS,Timor-Leste,Life expectancy,Asia,1981,31.25
 TLS,Timor-Leste,Life expectancy,Asia,1982,32.25
