@@ -40,9 +40,13 @@
             stroke-opacity: 0.7;
             shape-rendering: crispEdges;
         }
-        .nav-button.active {
+        .nav-button.active, .control-button.active {
             background-color: #4A5568;
             color: white;
+        }
+        .small-multiple-chart {
+            width: 100%;
+            height: 250px;
         }
     </style>
 </head>
@@ -52,7 +56,7 @@
 
         <header class="text-center mb-8">
             <h1 class="text-4xl font-bold text-gray-900">A Story of Global Development</h1>
-            <p class="text-lg text-gray-600 mt-2">An interactive journey through population, economic, and health data from 1960 to 2016.</p>
+            <p class="text-lg text-gray-600 mt-2">An interactive journey through population, economic, life expetancy and birth rate from 1960 to 2023.</p>
         </header>
 
         <!-- Navigation -->
@@ -70,11 +74,16 @@
             <!-- Scenes will be rendered here by D3 -->
         </main>
 
+        <footer class="text-center mt-8 pt-4 border-t border-gray-200">
+            <p class="text-sm text-gray-500">
+                Source: <a href="https://databank.worldbank.org/source/world-development-indicators" target="_blank" class="text-blue-500 hover:underline">World Development Indicators (WDI)</a>
+            </p>
+        </footer>
+
     </div>
 
     <script>
         // --- DATA ---
-        // Fetching data from the live URL.
         const dataUrl = 'https://raw.githubusercontent.com/ChelseaCao8888/WorldPopulation/main/data.csv';
 
         // --- GLOBAL STATE & SETUP ---
@@ -83,7 +92,6 @@
         let processedData = {};
         let years = [];
 
-        // Adjusted margin for y-axis label
         const margin = {top: 60, right: 60, bottom: 60, left: 90};
         
         // --- DATA PROCESSING ---
@@ -93,7 +101,6 @@
                 const country = d["Country Name"];
                 const year = +d["Year"];
                 const indicator = d["Indicator Name"];
-                // Handle values that might be quoted and contain commas
                 const valueStr = d["Value"] || "";
                 const value = valueStr.replace(/,/g, '');
                 const region = d["Region"];
@@ -109,13 +116,23 @@
                 dataByCountryYear[country].years[year][indicator] = +value;
             });
             
-            // For Scene 3, create a flat array with one object per country-year
+            // Calculate GDP Per Capita for income groups
+            for (const country in dataByCountryYear) {
+                if (dataByCountryYear[country].years) {
+                    for (const year in dataByCountryYear[country].years) {
+                        const yearData = dataByCountryYear[country].years[year];
+                        if (yearData['GDP'] && yearData['Population']) {
+                            yearData['GDP per capita'] = yearData['GDP'] / yearData['Population'];
+                        }
+                    }
+                }
+            }
+
             const flatData = [];
             const yearSet = new Set();
             const countryBlacklist = ["High income", "Low income", "Lower middle income", "Middle income", "Upper middle income", "World"];
 
             for (const country in dataByCountryYear) {
-                // Exclude aggregated groups from the scatter plot
                 if (countryBlacklist.includes(country)) continue;
 
                 for (const year in dataByCountryYear[country].years) {
@@ -142,11 +159,10 @@
 
         // --- SCENE 1: THE BIG PICTURE ---
         function drawScene1() {
-            mainContent.html(""); // Clear previous scene
+            mainContent.html(""); 
 
             if (!processedData.byCountryYear || !processedData.byCountryYear['World']) {
                 mainContent.html('<p class="text-center text-red-500 p-8">Error: Data for "World" could not be found or processed. Cannot render Scene 1.</p>');
-                console.error("processedData.byCountryYear['World'] is undefined. Available keys:", processedData.byCountryYear ? Object.keys(processedData.byCountryYear) : "processedData.byCountryYear is itself undefined.");
                 return;
             }
 
@@ -158,10 +174,9 @@
                 birthRate: worldData[year]['Birth rate']
             })).filter(d => d.population && d.gdp && d.birthRate).sort((a, b) => a.year - b.year);
 
-            const container = mainContent.append('div')
-                .attr('class', 'bg-white p-6 rounded-lg shadow-lg');
+            const container = mainContent.append('div').attr('class', 'bg-white p-6 rounded-lg shadow-lg');
             
-            container.append('h2').attr('class', 'text-2xl font-bold mb-1 text-center').text('Scene 1: A Changing World');
+            container.append('h2').attr('class', 'text-2xl font-bold mb-1 text-center').text('A Changing World');
             container.append('p').attr('class', 'text-gray-600 mb-6 text-center max-w-5xl mx-auto').text('Since 1960, the world has seen dramatic shifts. Population has more than doubled, the global economy has grown exponentially, and birth rates have fallen significantly. This overview sets the stage for our story.');
 
             const chartContainer = container.append('div').attr('class', 'chart-container');
@@ -172,90 +187,23 @@
 
             const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-            // SCALES
-            const x = d3.scaleTime()
-                .domain(d3.extent(timeData, d => new Date(d.year, 0, 1)))
-                .range([0, chartWidth]);
+            const x = d3.scaleTime().domain(d3.extent(timeData, d => new Date(d.year, 0, 1))).range([0, chartWidth]);
+            const yPop = d3.scaleLinear().domain([0, d3.max(timeData, d => d.population)]).range([chartHeight, 0]);
+            const yGdp = d3.scaleLinear().domain([0, d3.max(timeData, d => d.gdp)]).range([chartHeight, 0]);
+            const yBirth = d3.scaleLinear().domain([d3.min(timeData, d=>d.birthRate) * 0.9, d3.max(timeData, d => d.birthRate) * 1.1]).range([chartHeight, 0]);
 
-            const yPop = d3.scaleLinear()
-                .domain([0, d3.max(timeData, d => d.population)])
-                .range([chartHeight, 0]);
-            
-            const yGdp = d3.scaleLinear()
-                .domain([0, d3.max(timeData, d => d.gdp)])
-                .range([chartHeight, 0]);
-
-            const yBirth = d3.scaleLinear()
-                .domain([d3.min(timeData, d=>d.birthRate) * 0.9, d3.max(timeData, d => d.birthRate) * 1.1])
-                .range([chartHeight, 0]);
-
-            // AXES
-            g.append("g")
-                .attr("transform", `translate(0,${chartHeight})`)
-                .call(d3.axisBottom(x));
+            g.append("g").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x));
             
             const yAxisLeft = g.append("g").call(d3.axisLeft(yPop).ticks(5).tickFormat(d3.format(".2s")));
-            
-            yAxisLeft.append("text")
-             .attr("class", "axis-label")
-             .attr("transform", "rotate(-90)")
-             .attr("y", 0 - margin.left + 30)
-             .attr("x", 0 - (chartHeight / 2))
-             .attr("dy", "1em")
-             .style("text-anchor", "middle")
-             .text("Population")
-             .attr("fill", "black");
+            yAxisLeft.append("text").attr("class", "axis-label").attr("transform", "rotate(-90)").attr("y", 0 - margin.left + 30).attr("x", 0 - (chartHeight / 2)).attr("dy", "1em").style("text-anchor", "middle").text("Population").attr("fill", "black");
             
             const yAxisRight = g.append("g").attr("transform", `translate(${chartWidth}, 0)`).call(d3.axisRight(yGdp).ticks(5).tickFormat(d3.format(".2s")));
-            
-            yAxisRight.append("text")
-             .attr("class", "axis-label")
-             .attr("transform", "rotate(-90)")
-             .attr("y", margin.right - 20)
-             .attr("x", 0 - (chartHeight / 2))
-             .attr("dy", "1em")
-             .style("text-anchor", "middle")
-             .text("GDP ($)")
-             .attr("fill", "black");
+            yAxisRight.append("text").attr("class", "axis-label").attr("transform", "rotate(-90)").attr("y", margin.right - 20).attr("x", 0 - (chartHeight / 2)).attr("dy", "1em").style("text-anchor", "middle").text("GDP ($)").attr("fill", "black");
 
-            // BARS for Population
-            g.selectAll(".bar")
-                .data(timeData)
-                .enter().append("rect")
-                .attr("class", "bar")
-                .attr("x", d => x(new Date(d.year, 0, 1)) - (chartWidth / timeData.length / 2))
-                .attr("y", d => yPop(d.population))
-                .attr("width", chartWidth / timeData.length)
-                .attr("height", d => chartHeight - yPop(d.population))
-                .attr("fill", "steelblue")
-                .attr("opacity", 0.6);
-
-            // LINE for GDP
-            const gdpLine = d3.line()
-                .x(d => x(new Date(d.year, 0, 1)))
-                .y(d => yGdp(d.gdp));
+            g.selectAll(".bar").data(timeData).enter().append("rect").attr("class", "bar").attr("x", d => x(new Date(d.year, 0, 1)) - (chartWidth / timeData.length / 2)).attr("y", d => yPop(d.population)).attr("width", chartWidth / timeData.length).attr("height", d => chartHeight - yPop(d.population)).attr("fill", "steelblue").attr("opacity", 0.6);
+            g.append("path").datum(timeData).attr("fill", "none").attr("stroke", "green").attr("stroke-width", 2.5).attr("d", d3.line().x(d => x(new Date(d.year, 0, 1))).y(d => yGdp(d.gdp)));
+            g.append("path").datum(timeData).attr("fill", "none").attr("stroke", "red").attr("stroke-width", 2.5).attr("stroke-dasharray", "5,5").attr("d", d3.line().x(d => x(new Date(d.year, 0, 1))).y(d => yBirth(d.birthRate)));
             
-            g.append("path")
-                .datum(timeData)
-                .attr("fill", "none")
-                .attr("stroke", "green")
-                .attr("stroke-width", 2.5)
-                .attr("d", gdpLine);
-
-            // DASHED LINE for Birth Rate
-            const birthLine = d3.line()
-                .x(d => x(new Date(d.year, 0, 1)))
-                .y(d => yBirth(d.birthRate));
-            
-            g.append("path")
-                .datum(timeData)
-                .attr("fill", "none")
-                .attr("stroke", "red")
-                .attr("stroke-width", 2.5)
-                .attr("stroke-dasharray", "5,5")
-                .attr("d", birthLine);
-            
-            // LEGEND
             const legend = svg.append("g").attr("transform", `translate(${margin.left}, 10)`);
             legend.append("rect").attr("x", 0).attr("y", 0).attr("width", 15).attr("height", 15).attr("fill", "steelblue").attr("opacity", 0.6);
             legend.append("text").attr("x", 20).attr("y", 12).text("World Population").attr("font-size", "12px");
@@ -265,99 +213,117 @@
             legend.append("text").attr("x", 270).attr("y", 12).text("World Birth Rate (Implied Axis)").attr("font-size", "12px");
         }
 
-        // --- SCENE 2: A CLOSER LOOK ---
+        // --- SCENE 2: A WORLD OF CONTRASTS (CONSOLIDATED) ---
         function drawScene2() {
             mainContent.html(""); // Clear previous scene
 
             const container = mainContent.append('div')
                 .attr('class', 'bg-white p-6 rounded-lg shadow-lg');
             
-            container.append('h2').attr('class', 'text-2xl font-bold mb-1 text-center').text('Scene 2: A Tale of Different Paths');
-            container.append('p').attr('class', 'text-gray-600 mb-6 text-center max-w-3xl mx-auto').text('The global story masks diverse experiences. Use the filters below to see how development trends differ across income levels and geographical regions.');
+            container.append('h2').attr('class', 'text-2xl font-bold mb-1 text-center').text('A Closer Look');
+            container.append('p').attr('class', 'text-gray-600 mb-4 text-center max-w-4xl mx-auto').text('The smooth global trend from Scene 1 hides very different stories. Here, we compare income groups against the world average. Select an indicator to see their unique journeys.');
 
-            const controls = container.append('div').attr('class', 'flex justify-center items-center space-x-4 mb-4');
+            const indicators = [
+                { key: 'Life expectancy', label: 'Life Expectancy' },
+                { key: 'GDP per capita', label: 'GDP (Per Capita)' },
+                { key: 'Birth rate', label: 'Birth Rate' },
+                { key: 'Population', label: 'Population' }
+            ];
+            const incomeGroups = ["High income", "Upper middle income", "Middle income", "Lower middle income", "Low income"];
+            const groupsToPlot = ["World", ...incomeGroups];
+
+            const controls = container.append('div').attr('class', 'flex justify-center items-center space-x-2 mb-6');
             
-            controls.append('label').attr('for', 'income-filter').attr('class', 'font-semibold').text('Income Group:');
-            const incomeSelect = controls.append('select').attr('id', 'income-filter').attr('class', 'p-2 border rounded-md');
-            const incomeGroups = ["All", "High income", "Middle income", "Lower middle income", "Low income"];
-            incomeSelect.selectAll('option').data(incomeGroups).enter().append('option').text(d => d).attr('value', d => d);
+            indicators.forEach(indicator => {
+                controls.append('button')
+                    .attr('class', 'control-button px-3 py-1.5 rounded-md font-semibold text-gray-700 hover:bg-gray-200 transition-colors duration-300')
+                    .attr('data-indicator', indicator.key)
+                    .text(indicator.label)
+                    .on('click', function() {
+                        d3.selectAll('.control-button').classed('active', false);
+                        d3.select(this).classed('active', true);
+                        updateChart(indicator.key);
+                    });
+            });
 
-            controls.append('label').attr('for', 'region-filter').attr('class', 'font-semibold').text('Region:');
-            const regionSelect = controls.append('select').attr('id', 'region-filter').attr('class', 'p-2 border rounded-md');
-            const regions = ["All", "Asia", "Europe", "Africa", "Americas", "Oceania"];
-            regionSelect.selectAll('option').data(regions).enter().append('option').text(d => d).attr('value', d => d);
+            const chartContainer = container.append('div').attr('class', 'chart-container');
+            const svg = chartContainer.append('svg').attr('width', '100%').attr('height', '100%');
+            const chartWidth = +svg.style('width').replace('px', '') - margin.left - margin.right;
+            const chartHeight = +svg.style('height').replace('px', '') - margin.top - margin.bottom;
+            const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-            const chartContainer = container.append('div').attr('id', 'scene2-chart').attr('class', 'chart-container');
+            const color = d3.scaleOrdinal()
+                .domain(groupsToPlot)
+                .range(['#333333', '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']);
 
-            function updateChart() {
-                const selectedIncome = incomeSelect.property('value');
-                let dataKey = selectedIncome === 'All' ? 'World' : selectedIncome;
+            function updateChart(selectedIndicator) {
+                g.selectAll("*").remove(); // Clear previous chart elements
 
-                const groupData = processedData.byCountryYear[dataKey]?.years;
-                if(!groupData) {
-                    d3.select('#scene2-chart').html('<p class="text-center text-red-500 p-8">Data not available for this selection.</p>');
-                    return;
-                }
+                const allPlotData = [];
+                const plotData = groupsToPlot.map(group => {
+                    const groupData = processedData.byCountryYear[group]?.years;
+                    if (!groupData) return { name: group, values: [] };
+                    
+                    const timeData = Object.keys(groupData).map(year => ({
+                        year: +year,
+                        value: groupData[year][selectedIndicator]
+                    })).filter(d => d.value).sort((a, b) => a.year - b.year);
+                    
+                    allPlotData.push(...timeData);
+                    return { name: group, values: timeData };
+                });
 
-                const timeData = Object.keys(groupData).map(year => ({
-                    year: +year,
-                    population: groupData[year]['Population'],
-                    gdp: groupData[year]['GDP'],
-                    birthRate: groupData[year]['Birth rate']
-                })).filter(d => d.population && d.gdp && d.birthRate).sort((a, b) => a.year - b.year);
-
-                d3.select('#scene2-chart').html("");
-                const svg = d3.select('#scene2-chart').append('svg').attr('width', '100%').attr('height', '100%');
-                const { width, height } = d3.select('#scene2-chart').node().getBoundingClientRect();
-                const chartWidth = width - margin.left - margin.right;
-                const chartHeight = height - margin.top - margin.bottom;
-
-                const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+                const x = d3.scaleTime().domain([new Date(1960, 0, 1), new Date(2023, 0, 1)]).range([0, chartWidth]);
+                const y = d3.scaleLinear().domain(d3.extent(allPlotData, d => d.value)).range([chartHeight, 0]).nice();
                 
-                if(timeData.length === 0) {
-                     g.append('text').attr('x', chartWidth/2).attr('y', chartHeight/2).attr('text-anchor', 'middle').text('No data for this selection.');
-                     return;
-                }
-
-                const x = d3.scaleTime().domain(d3.extent(timeData, d => new Date(d.year, 0, 1))).range([0, chartWidth]);
-                const yPop = d3.scaleLinear().domain([0, d3.max(timeData, d => d.population)]).range([chartHeight, 0]);
-                const yGdp = d3.scaleLinear().domain([0, d3.max(timeData, d => d.gdp)]).range([chartHeight, 0]);
-                const yBirth = d3.scaleLinear().domain([0, d3.max(timeData, d => d.birthRate)]).range([chartHeight, 0]);
-
                 g.append("g").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x));
-                g.append("g").call(d3.axisLeft(yPop).ticks(5).tickFormat(d3.format(".2s")));
-                g.append("g").attr("transform", `translate(${chartWidth}, 0)`).call(d3.axisRight(yGdp).ticks(5).tickFormat(d3.format(".2s")));
-                
-                g.selectAll(".bar").data(timeData).enter().append("rect").attr("x", d => x(new Date(d.year, 0, 1)) - (chartWidth / timeData.length / 2)).attr("y", d => yPop(d.population)).attr("width", chartWidth / timeData.length).attr("height", d => chartHeight - yPop(d.population)).attr("fill", "steelblue").attr("opacity", 0.6);
-                g.append("path").datum(timeData).attr("fill", "none").attr("stroke", "green").attr("stroke-width", 2.5).attr("d", d3.line().x(d => x(new Date(d.year, 0, 1))).y(d => yGdp(d.gdp)));
-                g.append("path").datum(timeData).attr("fill", "none").attr("stroke", "red").attr("stroke-width", 2.5).attr("stroke-dasharray", "5,5").attr("d", d3.line().x(d => x(new Date(d.year, 0, 1))).y(d => yBirth(d.birthRate)));
+                g.append("g").call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".2s")));
+
+                const line = d3.line()
+                    .x(d => x(new Date(d.year, 0, 1)))
+                    .y(d => y(d.value));
+
+                plotData.forEach(groupData => {
+                    g.append("path")
+                        .datum(groupData.values)
+                        .attr("fill", "none")
+                        .attr("stroke", color(groupData.name))
+                        .attr("stroke-width", groupData.name === 'World' ? 3 : 2)
+                        .attr("stroke-dasharray", groupData.name === 'World' ? "none" : "4,4")
+                        .attr("d", line);
+                });
+
+                // LEGEND
+                const legend = svg.append("g").attr("transform", `translate(${chartWidth + margin.left - 100}, 20)`);
+                plotData.forEach((d, i) => {
+                    const legendItem = legend.append("g").attr("transform", `translate(0, ${i * 20})`);
+                    legendItem.append("line")
+                        .attr("x1", 0).attr("x2", 20).attr("y1", 10).attr("y2", 10)
+                        .attr("stroke", color(d.name))
+                        .attr("stroke-width", d.name === 'World' ? 3 : 2)
+                        .attr("stroke-dasharray", d.name === 'World' ? "none" : "4,4");
+                    legendItem.append("text")
+                        .attr("x", 25).attr("y", 10).attr("dy", "0.35em")
+                        .text(d.name).attr("font-size", "12px");
+                });
             }
             
-            incomeSelect.on('change', updateChart);
-            regionSelect.on('change', updateChart);
-            updateChart();
+            controls.select('.control-button').classed('active', true);
+            updateChart(indicators[0].key);
         }
-
 
         // --- SCENE 3: EXPLORING CONNECTIONS ---
         function drawScene3() {
             mainContent.html("");
 
-            const container = mainContent.append('div')
-                .attr('class', 'bg-white p-6 rounded-lg shadow-lg');
+            const container = mainContent.append('div').attr('class', 'bg-white p-6 rounded-lg shadow-lg');
             
-            container.append('h2').attr('class', 'text-2xl font-bold mb-1 text-center').text('Scene 3: Health, Wealth, and Families');
+            container.append('h2').attr('class', 'text-2xl font-bold mb-1 text-center').text('Health, Wealth, and Families');
             container.append('p').attr('class', 'text-gray-600 mb-6 text-center max-w-3xl mx-auto').text('How are a country\'s wealth (GDP), family size (birth rate), and health (life expectancy) related? Use the slider to travel through time and see how these connections have evolved. Hover over a circle to see the country\'s details.');
 
             const controls = container.append('div').attr('class', 'flex flex-col items-center space-y-2 mb-4');
             controls.append('label').attr('for', 'year-slider').attr('id', 'year-label').attr('class', 'font-semibold').text(`Year: ${years[years.length - 1]}`);
-            controls.append('input')
-                .attr('type', 'range')
-                .attr('id', 'year-slider')
-                .attr('min', 0)
-                .attr('max', years.length - 1)
-                .attr('value', years.length - 1)
-                .attr('class', 'w-full max-w-lg');
+            controls.append('input').attr('type', 'range').attr('id', 'year-slider').attr('min', 0).attr('max', years.length - 1).attr('value', years.length - 1).attr('class', 'w-full max-w-lg');
 
             const chartContainer = container.append('div').attr('id', 'scene3-chart').attr('class', 'chart-container');
             const svg = chartContainer.append('svg').attr('width', '100%').attr('height', '100%');
@@ -367,42 +333,20 @@
 
             const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
             
-            // SCALES
-            // Fixed x-axis domain for Life Expectancy
             const x = d3.scaleLinear().domain([30, 90]).range([0, chartWidth]);
             const y = d3.scaleLinear().domain(d3.extent(processedData.flat, d=>d.birthRate)).range([chartHeight, 0]).nice();
             const radius = d3.scaleSqrt().domain([0, d3.max(processedData.flat, d=>d.gdp)]).range([2, 50]);
             const color = d3.scaleOrdinal(d3.schemeCategory10).domain([...new Set(processedData.flat.map(d => d.region))].filter(r => r));
 
-            // AXES
             const xAxisGroup = g.append("g").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x));
             xAxisGroup.append("text").text("Life Expectancy (years)").attr("x", chartWidth / 2).attr("y", 40).attr("class", "axis-label").attr("fill", "black");
             
-            g.append("g").call(d3.axisLeft(y))
-                .append("text").text("Birth Rate (per 1,000 people)").attr("transform", "rotate(-90)").attr("x", -chartHeight/2).attr("y", -60).attr("class", "axis-label").attr("fill", "black").attr("text-anchor", "middle");
+            g.append("g").call(d3.axisLeft(y)).append("text").text("Birth Rate (per 1,000 people)").attr("transform", "rotate(-90)").attr("x", -chartHeight/2).attr("y", -60).attr("class", "axis-label").attr("fill", "black").attr("text-anchor", "middle");
 
-            // LEGEND
-            const legendContainer = svg.append("g")
-                .attr("transform", `translate(${chartWidth - 100}, 20)`);
-
-            const legend = legendContainer.selectAll(".legend")
-                .data(color.domain())
-                .enter().append("g")
-                .attr("class", "legend")
-                .attr("transform", (d, i) => `translate(0, ${i * 20})`);
-
-            legend.append("rect")
-                .attr("x", 0)
-                .attr("width", 18)
-                .attr("height", 18)
-                .style("fill", color);
-
-            legend.append("text")
-                .attr("x", 24)
-                .attr("y", 9)
-                .attr("dy", ".35em")
-                .style("text-anchor", "start")
-                .text(d => d);
+            const legendContainer = svg.append("g").attr("transform", `translate(${chartWidth - 100}, 20)`);
+            const legend = legendContainer.selectAll(".legend").data(color.domain()).enter().append("g").attr("class", "legend").attr("transform", (d, i) => `translate(0, ${i * 20})`);
+            legend.append("rect").attr("x", 0).attr("width", 18).attr("height", 18).style("fill", color);
+            legend.append("text").attr("x", 24).attr("y", 9).attr("dy", ".35em").style("text-anchor", "start").text(d => d);
 
             function updateScatter(yearIndex) {
                 const selectedYear = years[yearIndex];
@@ -411,35 +355,17 @@
 
                 const circles = g.selectAll("circle").data(yearData, d => d.country);
 
-                circles.exit()
-                    .transition().duration(500)
-                    .attr("r", 0)
-                    .remove();
+                circles.exit().transition().duration(500).attr("r", 0).remove();
 
-                circles.enter()
-                    .append("circle")
-                    .attr("fill", d => color(d.region))
-                    .attr("opacity", 0.7)
-                    .on('mouseover', function(event, d) { // Use function to get 'this'
-                        // Highlight circle on hover
-                        d3.select(this)
-                          .attr('stroke', 'black')
-                          .attr('stroke-width', 2);
-                        
+                circles.enter().append("circle").attr("fill", d => color(d.region)).attr("opacity", 0.7)
+                    .on('mouseover', function(event, d) {
+                        d3.select(this).attr('stroke', 'black').attr('stroke-width', 2);
                         tooltip.transition().duration(200).style('opacity', .9);
-                        tooltip.html(`<strong>${d.country}</strong><br/>
-                                     Region: ${d.region}<br/>
-                                     Life Exp: ${d.lifeExpectancy.toFixed(1)} yrs<br/>
-                                     Birth Rate: ${d.birthRate.toFixed(1)}<br/>
-                                     GDP: ${d3.format(".2s")(d.gdp)}`)
-                            .style('left', (event.pageX + 15) + 'px')
-                            .style('top', (event.pageY - 28) + 'px');
+                        tooltip.html(`<strong>${d.country}</strong><br/>Region: ${d.region}<br/>Life Exp: ${d.lifeExpectancy.toFixed(1)} yrs<br/>Birth Rate: ${d.birthRate.toFixed(1)}<br/>GDP: ${d3.format(".2s")(d.gdp)}`)
+                            .style('left', (event.pageX + 15) + 'px').style('top', (event.pageY - 28) + 'px');
                     })
-                    .on('mouseout', function() { // Use function to get 'this'
-                        // Remove highlight on mouseout
-                        d3.select(this)
-                          .attr('stroke', 'none');
-
+                    .on('mouseout', function() {
+                        d3.select(this).attr('stroke', 'none');
                         tooltip.transition().duration(500).style('opacity', 0);
                     })
                     .merge(circles)
@@ -449,10 +375,7 @@
                     .attr("r", d => radius(d.gdp));
             }
             
-            d3.select('#year-slider').on('input', function() {
-                updateScatter(+this.value);
-            });
-            
+            d3.select('#year-slider').on('input', function() { updateScatter(+this.value); });
             updateScatter(years.length - 1);
         }
 
@@ -483,7 +406,6 @@
         }
 
         initialize();
-
     </script>
 </body>
 </html>
