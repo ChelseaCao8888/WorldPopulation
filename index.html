@@ -83,7 +83,8 @@
         let processedData = {};
         let years = [];
 
-        const margin = {top: 60, right: 50, bottom: 60, left: 80};
+        // Adjusted margin for y-axis label
+        const margin = {top: 60, right: 60, bottom: 60, left: 90};
         
         // --- DATA PROCESSING ---
         function processRawData(data) {
@@ -143,7 +144,6 @@
         function drawScene1() {
             mainContent.html(""); // Clear previous scene
 
-            // FIX: Add a defensive check to ensure "World" data exists before trying to use it.
             if (!processedData.byCountryYear || !processedData.byCountryYear['World']) {
                 mainContent.html('<p class="text-center text-red-500 p-8">Error: Data for "World" could not be found or processed. Cannot render Scene 1.</p>');
                 console.error("processedData.byCountryYear['World'] is undefined. Available keys:", processedData.byCountryYear ? Object.keys(processedData.byCountryYear) : "processedData.byCountryYear is itself undefined.");
@@ -162,7 +162,7 @@
                 .attr('class', 'bg-white p-6 rounded-lg shadow-lg');
             
             container.append('h2').attr('class', 'text-2xl font-bold mb-1 text-center').text('Scene 1: A Changing World');
-            container.append('p').attr('class', 'text-gray-600 mb-6 text-center max-w-3xl mx-auto').text('Since 1960, the world has seen dramatic shifts. Population has more than doubled, the global economy has grown exponentially, and birth rates have fallen significantly. This overview sets the stage for our story.');
+            container.append('p').attr('class', 'text-gray-600 mb-6 text-center max-w-5xl mx-auto').text('Since 1960, the world has seen dramatic shifts. Population has more than doubled, the global economy has grown exponentially, and birth rates have fallen significantly. This overview sets the stage for our story.');
 
             const chartContainer = container.append('div').attr('class', 'chart-container');
             const svg = chartContainer.append('svg').attr('width', '100%').attr('height', '100%');
@@ -194,11 +194,29 @@
                 .attr("transform", `translate(0,${chartHeight})`)
                 .call(d3.axisBottom(x));
             
-            g.append("g").call(d3.axisLeft(yPop).ticks(5).tickFormat(d3.format(".2s")))
-             .append("text").text("Population").attr("x", -40).attr("y", -15).attr("class", "axis-label");
+            const yAxisLeft = g.append("g").call(d3.axisLeft(yPop).ticks(5).tickFormat(d3.format(".2s")));
             
-            g.append("g").attr("transform", `translate(${chartWidth}, 0)`).call(d3.axisRight(yGdp).ticks(5).tickFormat(d3.format(".2s")))
-             .append("text").text("GDP ($)").attr("x", -10).attr("y", -15).attr("class", "axis-label");
+            yAxisLeft.append("text")
+             .attr("class", "axis-label")
+             .attr("transform", "rotate(-90)")
+             .attr("y", 0 - margin.left + 30)
+             .attr("x", 0 - (chartHeight / 2))
+             .attr("dy", "1em")
+             .style("text-anchor", "middle")
+             .text("Population")
+             .attr("fill", "black");
+            
+            const yAxisRight = g.append("g").attr("transform", `translate(${chartWidth}, 0)`).call(d3.axisRight(yGdp).ticks(5).tickFormat(d3.format(".2s")));
+            
+            yAxisRight.append("text")
+             .attr("class", "axis-label")
+             .attr("transform", "rotate(-90)")
+             .attr("y", margin.right - 20)
+             .attr("x", 0 - (chartHeight / 2))
+             .attr("dy", "1em")
+             .style("text-anchor", "middle")
+             .text("GDP ($)")
+             .attr("fill", "black");
 
             // BARS for Population
             g.selectAll(".bar")
@@ -259,13 +277,11 @@
 
             const controls = container.append('div').attr('class', 'flex justify-center items-center space-x-4 mb-4');
             
-            // Income Filter
             controls.append('label').attr('for', 'income-filter').attr('class', 'font-semibold').text('Income Group:');
             const incomeSelect = controls.append('select').attr('id', 'income-filter').attr('class', 'p-2 border rounded-md');
             const incomeGroups = ["All", "High income", "Middle income", "Lower middle income", "Low income"];
             incomeSelect.selectAll('option').data(incomeGroups).enter().append('option').text(d => d).attr('value', d => d);
 
-            // Region Filter
             controls.append('label').attr('for', 'region-filter').attr('class', 'font-semibold').text('Region:');
             const regionSelect = controls.append('select').attr('id', 'region-filter').attr('class', 'p-2 border rounded-md');
             const regions = ["All", "Asia", "Europe", "Africa", "Americas", "Oceania"];
@@ -275,8 +291,6 @@
 
             function updateChart() {
                 const selectedIncome = incomeSelect.property('value');
-                // Region filtering requires aggregation, which is complex.
-                // This simplified version focuses on the pre-aggregated income groups.
                 let dataKey = selectedIncome === 'All' ? 'World' : selectedIncome;
 
                 const groupData = processedData.byCountryYear[dataKey]?.years;
@@ -305,7 +319,6 @@
                      return;
                 }
 
-                // Scales and Axes (similar to Scene 1)
                 const x = d3.scaleTime().domain(d3.extent(timeData, d => new Date(d.year, 0, 1))).range([0, chartWidth]);
                 const yPop = d3.scaleLinear().domain([0, d3.max(timeData, d => d.population)]).range([chartHeight, 0]);
                 const yGdp = d3.scaleLinear().domain([0, d3.max(timeData, d => d.gdp)]).range([chartHeight, 0]);
@@ -315,21 +328,20 @@
                 g.append("g").call(d3.axisLeft(yPop).ticks(5).tickFormat(d3.format(".2s")));
                 g.append("g").attr("transform", `translate(${chartWidth}, 0)`).call(d3.axisRight(yGdp).ticks(5).tickFormat(d3.format(".2s")));
                 
-                // Visuals
                 g.selectAll(".bar").data(timeData).enter().append("rect").attr("x", d => x(new Date(d.year, 0, 1)) - (chartWidth / timeData.length / 2)).attr("y", d => yPop(d.population)).attr("width", chartWidth / timeData.length).attr("height", d => chartHeight - yPop(d.population)).attr("fill", "steelblue").attr("opacity", 0.6);
                 g.append("path").datum(timeData).attr("fill", "none").attr("stroke", "green").attr("stroke-width", 2.5).attr("d", d3.line().x(d => x(new Date(d.year, 0, 1))).y(d => yGdp(d.gdp)));
                 g.append("path").datum(timeData).attr("fill", "none").attr("stroke", "red").attr("stroke-width", 2.5).attr("stroke-dasharray", "5,5").attr("d", d3.line().x(d => x(new Date(d.year, 0, 1))).y(d => yBirth(d.birthRate)));
             }
             
             incomeSelect.on('change', updateChart);
-            regionSelect.on('change', updateChart); // Note: Region filter is not fully implemented
-            updateChart(); // Initial draw
+            regionSelect.on('change', updateChart);
+            updateChart();
         }
 
 
         // --- SCENE 3: EXPLORING CONNECTIONS ---
         function drawScene3() {
-            mainContent.html(""); // Clear previous scene
+            mainContent.html("");
 
             const container = mainContent.append('div')
                 .attr('class', 'bg-white p-6 rounded-lg shadow-lg');
@@ -344,7 +356,7 @@
                 .attr('id', 'year-slider')
                 .attr('min', 0)
                 .attr('max', years.length - 1)
-                .attr('value', years.length - 1) // Start at the most recent year
+                .attr('value', years.length - 1)
                 .attr('class', 'w-full max-w-lg');
 
             const chartContainer = container.append('div').attr('id', 'scene3-chart').attr('class', 'chart-container');
@@ -355,17 +367,42 @@
 
             const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
             
-            // Scales
-            const x = d3.scaleLinear().domain(d3.extent(processedData.flat, d=>d.lifeExpectancy)).range([0, chartWidth]).nice();
+            // SCALES
+            // Fixed x-axis domain for Life Expectancy
+            const x = d3.scaleLinear().domain([30, 90]).range([0, chartWidth]);
             const y = d3.scaleLinear().domain(d3.extent(processedData.flat, d=>d.birthRate)).range([chartHeight, 0]).nice();
             const radius = d3.scaleSqrt().domain([0, d3.max(processedData.flat, d=>d.gdp)]).range([2, 50]);
-            const color = d3.scaleOrdinal(d3.schemeCategory10).domain([...new Set(processedData.flat.map(d => d.region))]);
+            const color = d3.scaleOrdinal(d3.schemeCategory10).domain([...new Set(processedData.flat.map(d => d.region))].filter(r => r));
 
-            // Axes
-            g.append("g").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x))
-                .append("text").text("Life Expectancy (years)").attr("x", chartWidth / 2).attr("y", 40).attr("class", "axis-label").attr("fill", "black");
+            // AXES
+            const xAxisGroup = g.append("g").attr("transform", `translate(0,${chartHeight})`).call(d3.axisBottom(x));
+            xAxisGroup.append("text").text("Life Expectancy (years)").attr("x", chartWidth / 2).attr("y", 40).attr("class", "axis-label").attr("fill", "black");
+            
             g.append("g").call(d3.axisLeft(y))
                 .append("text").text("Birth Rate (per 1,000 people)").attr("transform", "rotate(-90)").attr("x", -chartHeight/2).attr("y", -60).attr("class", "axis-label").attr("fill", "black").attr("text-anchor", "middle");
+
+            // LEGEND
+            const legendContainer = svg.append("g")
+                .attr("transform", `translate(${chartWidth - 100}, 20)`);
+
+            const legend = legendContainer.selectAll(".legend")
+                .data(color.domain())
+                .enter().append("g")
+                .attr("class", "legend")
+                .attr("transform", (d, i) => `translate(0, ${i * 20})`);
+
+            legend.append("rect")
+                .attr("x", 0)
+                .attr("width", 18)
+                .attr("height", 18)
+                .style("fill", color);
+
+            legend.append("text")
+                .attr("x", 24)
+                .attr("y", 9)
+                .attr("dy", ".35em")
+                .style("text-anchor", "start")
+                .text(d => d);
 
             function updateScatter(yearIndex) {
                 const selectedYear = years[yearIndex];
@@ -383,7 +420,12 @@
                     .append("circle")
                     .attr("fill", d => color(d.region))
                     .attr("opacity", 0.7)
-                    .on('mouseover', (event, d) => {
+                    .on('mouseover', function(event, d) { // Use function to get 'this'
+                        // Highlight circle on hover
+                        d3.select(this)
+                          .attr('stroke', 'black')
+                          .attr('stroke-width', 2);
+                        
                         tooltip.transition().duration(200).style('opacity', .9);
                         tooltip.html(`<strong>${d.country}</strong><br/>
                                      Region: ${d.region}<br/>
@@ -393,7 +435,11 @@
                             .style('left', (event.pageX + 15) + 'px')
                             .style('top', (event.pageY - 28) + 'px');
                     })
-                    .on('mouseout', () => {
+                    .on('mouseout', function() { // Use function to get 'this'
+                        // Remove highlight on mouseout
+                        d3.select(this)
+                          .attr('stroke', 'none');
+
                         tooltip.transition().duration(500).style('opacity', 0);
                     })
                     .merge(circles)
@@ -407,19 +453,16 @@
                 updateScatter(+this.value);
             });
             
-            updateScatter(years.length - 1); // Initial draw for the last year
+            updateScatter(years.length - 1);
         }
 
         // --- INITIALIZATION ---
         async function initialize() {
             mainContent.html('<p class="text-center p-16">Loading data...</p>');
             try {
-                // Fetch and parse the data from the live URL.
-                // FIX: Use d3.csv for comma-separated values, not d3.tsv
                 const rawData = await d3.csv(dataUrl);
                 processedData = processRawData(rawData);
                 
-                // Setup scene navigation
                 const buttons = {
                     'btn-scene1': drawScene1,
                     'btn-scene2': drawScene2,
@@ -432,7 +475,6 @@
                     buttons[this.id]();
                 });
 
-                // Start with Scene 1
                 drawScene1();
             } catch (error) {
                 mainContent.html(`<p class="text-center text-red-500 p-16">Failed to load data. Please check the console for errors.</p>`);
